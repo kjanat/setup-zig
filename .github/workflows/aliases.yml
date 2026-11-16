@@ -17,6 +17,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   aliases:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     permissions:
       contents: read

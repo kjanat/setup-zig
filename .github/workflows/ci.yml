@@ -6,6 +6,7 @@ permissions:
   contents: read
 jobs:
   check:
+    timeout-minutes: 10
     name: Tests and distribution
     runs-on: ubuntu-latest
     steps:
@@ -22,6 +23,7 @@ jobs:
       - name: Lint action and workflows
         run: bun run actionlint --ignore unpinned-reference
   smoke:
+    timeout-minutes: 20
     name: Install on ${{ matrix.os }} (tool cache ${{ matrix.tool-cache }})
     strategy:
       fail-fast: false
@@ -87,6 +89,7 @@ jobs:
           version: ${{ matrix.zig-version }}
           use-tool-cache: ${{ matrix.tool-cache }}
   versions:
+    timeout-minutes: 15
     name: Resolve Zig ${{ matrix.version }}
     runs-on: ubuntu-latest
     strategy:

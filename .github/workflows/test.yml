@@ -4,6 +4,7 @@ permissions:
   contents: read
 jobs:
   test-from-project:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
       - name: "Checkout"
@@ -35,6 +36,7 @@ jobs:
             exit 1
           fi
   test:
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     strategy:
       matrix:
