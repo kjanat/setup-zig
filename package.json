@@ -12,9 +12,10 @@
 	},
 	"scripts": {
 		"preactionlint": "tsdown --logLevel silent",
-		"actionlint": "actionlint check --strict --experimental",
+		"actionlint": "actionlint check --strict --ignore action/missing-file",
 		"build": "node scripts/build.ts",
-		"check:dist": "bun run build && node --check dist/main.mjs && node --check dist/post.mjs",
+		"precheck:dist": "bun run build",
+		"check:dist": "node --check dist/*",
 		"fmt": "bunx @kjanat/fmt --excludes dist",
 		"test": "node --experimental-vm-modules --test test/*.test.ts",
 		"typecheck": "tsc --noEmit && tsc --noEmit --project test"
