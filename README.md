@@ -31,7 +31,7 @@ An explicit `version` takes precedence over the manifest:
 - uses: kjanat/setup-zig@master
   id: zig
   with:
-    version: '0.15.2'
+    version: "0.15.2"
 - run: zig version
 ```
 
@@ -41,24 +41,24 @@ On Forgejo, use the full repository URL if required by your runner, for example 
 
 ## Inputs
 
-| Input | Default | Purpose |
-| --- | --- | --- |
-| `version` | empty | Compiler version or selector. Empty reads the manifest. |
-| `manifest-path` | `build.zig.zon` | Manifest path relative to the workspace. Used when `version` is empty. |
-| `mirror` | empty | Use one HTTPS download mirror instead of automatic mirror selection. |
-| `use-cache` | `true` | Restore and save Zig build caches. |
-| `cache-key` | empty | Additional build-cache key component, useful for matrix jobs. |
-| `cache-size-limit` | `2048` | Maximum build-cache size in MiB. Zero disables the limit. |
-| `use-tool-cache` | automatic | Reuse extracted compiler installations on the runner. |
+| Input              | Default         | Purpose                                                                |
+| ------------------ | --------------- | ---------------------------------------------------------------------- |
+| `version`          | empty           | Compiler version or selector. Empty reads the manifest.                |
+| `manifest-path`    | `build.zig.zon` | Manifest path relative to the workspace. Used when `version` is empty. |
+| `mirror`           | empty           | Use one HTTPS download mirror instead of automatic mirror selection.   |
+| `use-cache`        | `true`          | Restore and save Zig build caches.                                     |
+| `cache-key`        | empty           | Additional build-cache key component, useful for matrix jobs.          |
+| `cache-size-limit` | `2048`          | Maximum build-cache size in MiB. Zero disables the limit.              |
+| `use-tool-cache`   | automatic       | Reuse extracted compiler installations on the runner.                  |
 
 `use-tool-cache` defaults to `false` on GitHub-hosted runners and `true` elsewhere. Set it explicitly to `true` or `false` to override that choice.
 
 ## Outputs
 
-| Output | Purpose |
-| --- | --- |
+| Output    | Purpose                                                  |
+| --------- | -------------------------------------------------------- |
 | `version` | The concrete version reported by the installed compiler. |
-| `path` | The directory containing the installed Zig executable. |
+| `path`    | The directory containing the installed Zig executable.   |
 
 The compiler directory is added to `PATH`. Setup verifies that `zig version` matches the resolved version before exporting outputs.
 
@@ -98,13 +98,14 @@ Use Node 24 and the Bun version declared in `package.json`:
 
 ```sh
 bun install --frozen-lockfile
+bun run typecheck
 bun run test
 bun run build
 node scripts/smoke.mjs 0.15.2 false
 node scripts/smoke.mjs 0.15.2 true
 ```
 
-Source and distribution entry points are native ESM (`.mjs`). tsdown bundles runtime dependencies into `dist/`; `node_modules` is excluded from version control. Commit updated distribution files alongside source changes. `bun run check:dist` verifies that rebuilding reproduces the checked-in distribution.
+TypeScript source modules live in `src/`. The distribution entry points are native ESM (`.mjs`). tsdown bundles runtime dependencies into `dist/`; `node_modules` is excluded from version control. Commit updated distribution files alongside source changes. `bun run check:dist` verifies that rebuilding reproduces the checked-in distribution.
 
 Tests cover manifest parsing, historical archive naming, minisign verification and malformed input, HTTP errors and timeouts, optional-cache failures, and post-step state. The smoke script runs the bundled action from an isolated directory without `node_modules`, downloads Zig, and runs `zig init` and `zig build test`.
 

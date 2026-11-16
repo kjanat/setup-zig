@@ -6,51 +6,51 @@ jobs:
   test-from-project:
     runs-on: ubuntu-latest
     steps:
-    - name: 'Checkout'
-      uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
-      with: { fetch-depth: 0 }
-    - name: 'Create build.zig.zon'
-      run: |
-        cat >build.zig.zon <<EOF
-        .{
-            .name = "test-project",
-            .version = "0.0.0",
-            .minimum_zig_version = "0.13.0",
-            .paths = .{""},
-            .fingerprint = 0x43eaf07faceda5c3,
-        }
-        EOF
-    - name: 'Setup Zig'
-      uses: './'
-    - name: 'Check `zig version`'
-      run: |
-        if [ "$(zig version)" != '0.13.0' ]; then
-          echo "version mismatch: expected '0.13.0', got '$(zig version)'"
-          exit 1
-        fi
+      - name: "Checkout"
+        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v7.0.1
+        with: { fetch-depth: 0 }
+      - name: "Create build.zig.zon"
+        run: |
+          cat >build.zig.zon <<EOF
+          .{
+              .name = "test-project",
+              .version = "0.0.0",
+              .minimum_zig_version = "0.13.0",
+              .paths = .{""},
+              .fingerprint = 0x43eaf07faceda5c3,
+          }
+          EOF
+      - name: "Setup Zig"
+        uses: "./"
+      - name: "Check `zig version`"
+        run: |
+          if [ "$(zig version)" != '0.13.0' ]; then
+            echo "version mismatch: expected '0.13.0', got '$(zig version)'"
+            exit 1
+          fi
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         zig_version:
-          - 'master'
-          - 'latest'
-          - '2024.5.0-mach'
-          - '0.14.0'
-          - '0.14.1' # zig-linux-x86_64 -> zig-x86_64-linux
-          - '0.15.0'
-          - '0.15.1' # armv7a -> arm (though testing on ARM is TODO!)
-          - '0.15.2' # some x.x.2
+          - "master"
+          - "latest"
+          - "2024.5.0-mach"
+          - "0.14.0"
+          - "0.14.1" # zig-linux-x86_64 -> zig-x86_64-linux
+          - "0.15.0"
+          - "0.15.1" # armv7a -> arm (though testing on ARM is TODO!)
+          - "0.15.2" # some x.x.2
     steps:
-    - name: 'Checkout'
-      uses: 'actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803'
-      with: { fetch-depth: 0 }
-    - name: 'Setup Zig'
-      uses: './'
-      with: { version: '${{ matrix.zig_version }}' }
-    - name: 'Test `zig init`'
-      run: |
-        mkdir init
-        cd init
-        zig init
-        zig build test
+      - name: "Checkout"
+        uses: "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1" # v7.0.1
+        with: { fetch-depth: 0 }
+      - name: "Setup Zig"
+        uses: "./"
+        with: { version: "${{ matrix.zig_version }}" }
+      - name: "Test `zig init`"
+        run: |
+          mkdir init
+          cd init
+          zig init
+          zig build test

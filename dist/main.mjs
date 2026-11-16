@@ -1,16 +1,16 @@
-import { C as __commonJSMin, S as which, _ as exec, a as addPath, b as mkdirP, c as getBooleanInput, d as info, f as isDebug, g as warning, h as setOutput, i as require_semver, l as getInput, m as setFailed, n as restoreCache, o as debug, p as saveState, r as saveCache, s as exportVariable, t as isFeatureAvailable, v as getExecOutput, w as __toESM, x as rmRF, y as cp } from "./cache-CYmHjQF_.mjs";
-import * as path$1 from "path";
-import fs$2, * as fs from "node:fs/promises";
+import { C as __commonJSMin, S as which, _ as exec, a as addPath, b as mkdirP, c as getBooleanInput, d as info, f as isDebug, g as warning, h as setOutput, i as require_semver, l as getInput, m as setFailed, n as restoreCache, o as debug, p as saveState, r as saveCache, s as exportVariable, t as isFeatureAvailable, v as getExecOutput, w as __toESM, x as rmRF, y as cp } from "./cache-BNgf87Wy.mjs";
 import * as os$1 from "os";
 import * as crypto$1 from "crypto";
 import * as fs$1 from "fs";
+import * as path$1 from "path";
 import { ok } from "assert";
 import { Readable } from "node:stream";
 import * as crypto from "node:crypto";
 import { randomUUID } from "node:crypto";
-import * as path from "node:path";
 import * as os from "node:os";
 import { createWriteStream } from "node:fs";
+import * as path from "node:path";
+import fs$3, * as fs from "node:fs/promises";
 import { pipeline } from "node:stream/promises";
 // node_modules/@actions/tool-cache/lib/manifest.js
 var import_semver = /* @__PURE__ */ __toESM(require_semver(), 1);
@@ -8765,7 +8765,7 @@ var require_zon = /* @__PURE__ */ __commonJSMin(((exports) => {
 	});
 	exports.VERSION = "0.5.19";
 }));
-// network.mjs
+// src/network.ts
 var import_tabnas = require_tabnas();
 var import_jsonic = require_jsonic();
 var import_zon = require_zon();
@@ -8774,7 +8774,7 @@ async function fetchResponse(url, timeout = 15e3) {
 	try {
 		response = await fetch(url, { signal: AbortSignal.timeout(timeout) });
 	} catch (error) {
-		throw new Error(`Failed to fetch ${url}: ${error.message}`);
+		throw new Error(`Failed to fetch ${url}: ${error instanceof Error ? error.message : String(error)}`);
 	}
 	if (!response.ok) {
 		await response.body?.cancel();
@@ -8787,21 +8787,22 @@ async function fetchJson(url) {
 	try {
 		return await response.json();
 	} catch (error) {
-		throw new Error(`Failed to read JSON from ${url}: ${error.message}`);
+		throw new Error(`Failed to read JSON from ${url}: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
 async function downloadFile(url) {
 	const response = await fetchResponse(url, 12e4);
 	const destination = path.join(process.env.RUNNER_TEMP ?? os.tmpdir(), `setup-zig-${randomUUID()}`);
 	try {
+		if (!response.body) throw new Error("Empty response body");
 		await pipeline(Readable.fromWeb(response.body), createWriteStream(destination, { flags: "wx" }));
 		return destination;
 	} catch (error) {
 		await fs.rm(destination, { force: true });
-		throw new Error(`Failed to download ${url}: ${error.message}`);
+		throw new Error(`Failed to download ${url}: ${error instanceof Error ? error.message : String(error)}`);
 	}
 }
-// common.mjs
+// src/common.ts
 const zonParser = new import_tabnas.Tabnas().use(import_jsonic.jsonic).use(import_zon.Zon);
 const VERSIONS_JSON = "https://ziglang.org/download/index.json";
 const MACH_VERSIONS_JSON = "https://pkg.machengine.org/zig/index.json";
@@ -8815,7 +8816,7 @@ async function getVersion() {
 		try {
 			source = await fs$1.promises.readFile(manifest, "utf8");
 		} catch (error) {
-			if (error.code !== "ENOENT") throw error;
+			if (typeof error !== "object" || error === null || !("code" in error) || error.code !== "ENOENT") throw error;
 			info(`${manifest} not found (using latest)`);
 		}
 		if (source !== void 0) {
@@ -8823,22 +8824,26 @@ async function getVersion() {
 			try {
 				zon = zonParser.parse(source);
 			} catch (error) {
-				throw new Error(`Failed to parse ${manifest}: ${error.message}`);
+				throw new Error(`Failed to parse ${manifest}: ${error instanceof Error ? error.message : String(error)}`);
 			}
 			if (!zon || Array.isArray(zon) && zon.length !== 0 || typeof zon !== "object") throw new Error(`${manifest} must contain a ZON struct`);
-			raw = zon.mach_zig_version ?? zon.minimum_zig_version ?? "";
-			if (typeof raw !== "string") throw new Error(`Zig version in ${manifest} must be a string`);
+			const mach = "mach_zig_version" in zon ? zon.mach_zig_version : void 0;
+			const minimum = "minimum_zig_version" in zon ? zon.minimum_zig_version : void 0;
+			const candidate = mach ?? minimum ?? "";
+			if (typeof candidate !== "string") throw new Error(`Zig version in ${manifest} must be a string`);
+			raw = candidate;
 			if (raw === "") info(`No Zig version specified in ${manifest} (using latest)`);
 		}
 		if (raw === "") raw = "latest";
 	}
 	let version;
-	if (raw === "master") version = (await fetchJson(VERSIONS_JSON))?.master?.version;
+	if (raw === "master") version = versionFromIndex(await fetchJson(VERSIONS_JSON), "master");
 	else if (raw === "latest") {
 		const versions = await fetchJson(VERSIONS_JSON);
-		version = Object.keys(versions ?? {}).filter((v) => /^\d+\.\d+\.\d+$/.test(v)).sort((a, b) => versionLessThan(a, b) ? 1 : versionLessThan(b, a) ? -1 : 0)[0];
+		if (typeof versions !== "object" || versions === null) throw new Error("Invalid Zig version index");
+		version = Object.keys(versions).filter((v) => /^\d+\.\d+\.\d+$/.test(v)).sort((a, b) => versionLessThan(a, b) ? 1 : versionLessThan(b, a) ? -1 : 0)[0];
 	} else if (/^\d+\.\d+\.\d+-mach$/.test(raw)) {
-		version = (await fetchJson(MACH_VERSIONS_JSON))?.[raw]?.version;
+		version = versionFromIndex(await fetchJson(MACH_VERSIONS_JSON), raw);
 		if (!version) throw new Error(`Mach nominated version '${raw}' not found`);
 	} else version = raw;
 	if (typeof version !== "string" || parseVersion(version) === null) throw new Error(`Invalid or unavailable Zig version: ${version ?? raw}`);
@@ -8890,12 +8895,12 @@ function versionLessThan(cur_ver, min_ver) {
 }
 function parseVersion(str) {
 	const match = /^(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:-dev\.(?<dev>\d+)\+[0-9a-f]+)?$/.exec(str);
-	if (match === null) return null;
+	if (match?.groups === void 0) return null;
 	return {
-		major: parseInt(match.groups["major"]),
-		minor: parseInt(match.groups["minor"]),
-		patch: parseInt(match.groups["patch"]),
-		dev: match.groups["dev"] === void 0 ? null : parseInt(match.groups["dev"])
+		major: Number(match.groups["major"]),
+		minor: Number(match.groups["minor"]),
+		patch: Number(match.groups["patch"]),
+		dev: match.groups["dev"] === void 0 ? null : Number(match.groups["dev"])
 	};
 }
 async function getTarballExt() {
@@ -8915,7 +8920,13 @@ function getCacheSizeLimit() {
 	if (!Number.isFinite(bytes) || bytes < 0) throw new Error("'cache-size-limit' must be a nonnegative finite number of MiB");
 	return bytes;
 }
-// minisign.mjs
+function versionFromIndex(index, key) {
+	if (typeof index !== "object" || index === null || !(key in index)) return void 0;
+	const entry = Reflect.get(index, key);
+	if (typeof entry !== "object" || entry === null || !("version" in entry)) return void 0;
+	return typeof entry.version === "string" ? entry.version : void 0;
+}
+// src/minisign.ts
 async function parseKey(key_str) {
 	const key_info = decodeBase64(key_str, 42);
 	if (key_info.subarray(0, 2).toString() !== "Ed") throw new Error("invalid public key algorithm");
@@ -8932,15 +8943,17 @@ function parseSignature(sig_buf) {
 	if (lines.at(-1) === "") lines.pop();
 	if (lines.length > 4) throw new Error("invalid minisign signature: trailing bytes");
 	if (lines.length !== 4) throw new Error("invalid minisign signature: expected four lines");
-	if (!lines[0].startsWith("untrusted comment: ")) throw new Error("invalid minisign signature: bad untrusted comment header");
-	if (!lines[2].startsWith("trusted comment: ")) throw new Error("invalid minisign signature: bad trusted comment header");
-	const sig_info = decodeBase64(lines[1], 74);
-	const global_signature = decodeBase64(lines[3], 64);
+	const [untrusted, info, trusted, global] = lines;
+	if (untrusted === void 0 || info === void 0 || trusted === void 0 || global === void 0) throw new Error("invalid minisign signature: missing fields");
+	if (!untrusted.startsWith("untrusted comment: ")) throw new Error("invalid minisign signature: bad untrusted comment header");
+	if (!trusted.startsWith("trusted comment: ")) throw new Error("invalid minisign signature: bad trusted comment header");
+	const sig_info = decodeBase64(info, 74);
+	const global_signature = decodeBase64(global, 64);
 	return {
 		algorithm: sig_info.subarray(0, 2),
 		key_id: sig_info.subarray(2, 10),
 		signature: sig_info.subarray(10),
-		trusted_comment: Buffer.from(lines[2].slice(17)),
+		trusted_comment: Buffer.from(trusted.slice(17)),
 		global_signature
 	};
 }
@@ -8963,7 +8976,7 @@ function decodeBase64(text, length) {
 	if (data.length !== length || data.toString("base64") !== text) throw new Error("invalid minisign base64 or field length");
 	return data;
 }
-// main.mjs
+// src/main.ts
 const MINISIGN_KEY = "RWSGOq2NVecA2UPNdBUZykf1CCb147pkmdtYxgb3Ti+JO/wCYvhbAb/U";
 const CANONICAL_DEV = "https://ziglang.org/builds";
 const CANONICAL_RELEASE = "https://ziglang.org/download";
@@ -8973,7 +8986,7 @@ async function downloadFromMirror(mirror, tarball_filename) {
 	try {
 		const signature_response = await fetchResponse(`${mirror}/${tarball_filename}.minisig?source=github-kjanat-setup-zig`);
 		const signature_data = Buffer.from(await signature_response.arrayBuffer());
-		const tarball_data = await fs$2.readFile(tarball_path);
+		const tarball_data = await fs$3.readFile(tarball_path);
 		const key = await parseKey(MINISIGN_KEY);
 		const signature = parseSignature(signature_data);
 		if (!await verifySignature(key, signature, tarball_data)) throw new Error(`signature verification failed for '${mirror}/${tarball_filename}'`);
@@ -8981,7 +8994,7 @@ async function downloadFromMirror(mirror, tarball_filename) {
 		if (match === null || match[1] !== tarball_filename) throw new Error(`filename verification failed for '${mirror}/${tarball_filename}'`);
 		return tarball_path;
 	} catch (error) {
-		await fs$2.rm(tarball_path, { force: true });
+		await fs$3.rm(tarball_path, { force: true });
 		throw error;
 	}
 }
@@ -9021,7 +9034,10 @@ async function downloadTarball(tarball_filename) {
 		];
 	}
 	info(`Available mirrors: ${mirrors.join(", ")}`);
-	const shuffled_mirrors = mirrors.map((m) => [m, Math.random()]).sort((a, b) => a[1] - b[1]).map((a) => a[0]);
+	const shuffled_mirrors = mirrors.map((mirror) => ({
+		mirror,
+		order: Math.random()
+	})).sort((a, b) => a.order - b.order).map((item) => item.mirror);
 	for (const mirror of shuffled_mirrors) {
 		info(`Attempting mirror: ${mirror}`);
 		try {
@@ -9030,7 +9046,8 @@ async function downloadTarball(tarball_filename) {
 			info(`Mirror failed with error: ${e}`);
 		}
 	}
-	const zig_version = tarball_filename.match(/\d+\.\d+\.\d+(-dev\.\d+\+[0-9a-f]+)?/)[0];
+	const zig_version = tarball_filename.match(/\d+\.\d+\.\d+(-dev\.\d+\+[0-9a-f]+)?/)?.[0];
+	if (!zig_version) throw new Error(`Invalid archive filename: ${tarball_filename}`);
 	const canonical = zig_version.includes("-dev") ? CANONICAL_DEV : `${CANONICAL_RELEASE}/${zig_version}`;
 	info(`Attempting official: ${canonical}`);
 	return await downloadFromMirror(canonical, tarball_filename);
@@ -9038,23 +9055,25 @@ async function downloadTarball(tarball_filename) {
 async function retrieveTarball(tarball_name, tarball_ext) {
 	const cache_key = `setup-zig-tarball-${tarball_name}`;
 	const tarball_basename = `${tarball_name}${tarball_ext}`;
-	const tarball_cache_path = path$1.join(process.env["RUNNER_TEMP"], tarball_basename);
+	const runner_temp = process.env.RUNNER_TEMP;
+	if (!runner_temp) throw new Error("RUNNER_TEMP is required");
+	const tarball_cache_path = path$1.join(runner_temp, tarball_basename);
 	try {
 		if (isFeatureAvailable() && await restoreCache([tarball_cache_path], cache_key)) return tarball_cache_path;
 	} catch (error) {
-		warning(`Could not restore Zig archive cache: ${error.message}`);
+		warning(`Could not restore Zig archive cache: ${error instanceof Error ? error.message : String(error)}`);
 	}
 	info(`Cache miss. Fetching Zig ${await getVersion()}`);
 	const downloaded_path = await downloadTarball(tarball_basename);
 	try {
-		await fs$2.copyFile(downloaded_path, tarball_cache_path);
+		await fs$3.copyFile(downloaded_path, tarball_cache_path);
 	} finally {
-		await fs$2.rm(downloaded_path, { force: true });
+		await fs$3.rm(downloaded_path, { force: true });
 	}
 	try {
 		if (isFeatureAvailable()) await saveCache([tarball_cache_path], cache_key);
 	} catch (error) {
-		warning(`Could not save Zig archive cache: ${error.message}`);
+		warning(`Could not save Zig archive cache: ${error instanceof Error ? error.message : String(error)}`);
 	}
 	return tarball_cache_path;
 }
@@ -9062,10 +9081,11 @@ async function main() {
 	try {
 		const size_limit = getCacheSizeLimit();
 		const requested_version = await getVersion();
-		let use_tool_cache = getInput("use-tool-cache");
-		if (use_tool_cache === "true") use_tool_cache = true;
-		else if (use_tool_cache === "false") use_tool_cache = false;
-		else if (use_tool_cache === "") use_tool_cache = process.env["RUNNER_ENVIRONMENT"] !== "github-hosted";
+		const tool_cache_input = getInput("use-tool-cache");
+		let use_tool_cache;
+		if (tool_cache_input === "true") use_tool_cache = true;
+		else if (tool_cache_input === "false") use_tool_cache = false;
+		else if (tool_cache_input === "") use_tool_cache = process.env["RUNNER_ENVIRONMENT"] !== "github-hosted";
 		else throw new Error("Invalid 'use-tool-cache' value. Valid values: 'true', 'false'");
 		info(`Using tool-cache: ${use_tool_cache}`);
 		let zig_dir;
@@ -9080,7 +9100,7 @@ async function main() {
 			info(`Fetch took ${Date.now() - fetch_start} ms`);
 			info(`Extracting tarball ${tarball_name}${tarball_ext}`);
 			const extract_start = Date.now();
-			const zig_parent_dir = tarball_ext === ".zip" ? await extractZip(tarball_path) : await extractTar(tarball_path, null, "xJ");
+			const zig_parent_dir = tarball_ext === ".zip" ? await extractZip(tarball_path) : await extractTar(tarball_path, void 0, "xJ");
 			info(`Extract took ${Date.now() - extract_start} ms`);
 			const zig_inner_dir = path$1.join(zig_parent_dir, tarball_name);
 			if (use_tool_cache) {
@@ -9107,13 +9127,13 @@ async function main() {
 			try {
 				hit = await restoreCache([cache_path], cache_prefix);
 			} catch (error) {
-				warning(`Could not restore Zig build cache: ${error.message}`);
+				warning(`Could not restore Zig build cache: ${error instanceof Error ? error.message : String(error)}`);
 			}
 			if (hit === void 0) info(`Cache miss: leaving Zig cache directory at ${cache_path} unpopulated`);
 			else info(`Cache hit (key '${hit}'): populating Zig cache directory at ${cache_path}`);
 		}
 	} catch (err) {
-		setFailed(err.message);
+		setFailed(err instanceof Error ? err.message : String(err));
 	}
 }
 main();

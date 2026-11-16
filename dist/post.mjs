@@ -1,7 +1,7 @@
-import { d as info, g as warning, r as saveCache, u as getState } from "./cache-CYmHjQF_.mjs";
+import { d as info, g as warning, r as saveCache, u as getState } from "./cache-BNgf87Wy.mjs";
 import * as path from "path";
 import fs from "node:fs/promises";
-// post.mjs
+// src/post.ts
 async function main() {
 	try {
 		const cache_path = getState("cache-path");
@@ -31,7 +31,7 @@ async function main() {
 			} else info("Zig cache directory is inaccessible; nothing to save");
 		}
 	} catch (err) {
-		warning(`Could not save Zig build cache: ${err.message}`);
+		warning(`Could not save Zig build cache: ${err instanceof Error ? err.message : String(err)}`);
 	}
 }
 async function dirSize(dir_path) {

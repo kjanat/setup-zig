@@ -1,38 +1,38 @@
-name: 'Setup Zig Compiler'
-description: 'Download and install the Zig compiler, and cache the global Zig cache'
+name: "Setup Zig Compiler"
+description: "Download and install the Zig compiler, and cache the global Zig cache"
 inputs:
   version:
     description: 'Version of the Zig compiler, e.g. "0.13.0" or "0.13.0-dev.351+64ef45eb0". "master" uses the latest nightly build. "latest" uses the latest tagged release. Leave empty to use minimum_zig_version from build.zig.zon, with a fallback to "latest".'
-    default: ''
+    default: ""
   manifest-path:
-    description: 'Path to the build.zig.zon used when version is empty, relative to the workspace.'
-    default: 'build.zig.zon'
+    description: "Path to the build.zig.zon used when version is empty, relative to the workspace."
+    default: "build.zig.zon"
   mirror:
     description: 'Override of Zig download mirror to use, e.g. "https://pkg.machengine.org/zig".'
     required: false
-    default: ''
+    default: ""
   use-cache:
-    description: 'Whether to restore and save Zig build caches. Compiler archives are cached independently.'
+    description: "Whether to restore and save Zig build caches. Compiler archives are cached independently."
     required: true
     default: true
   cache-key:
-    description: 'Additional cache key component to include when caching the global Zig cache directory. When using a matrix strategy, this should include the matrix variables to ensure all jobs are cached. Matrix variables which decide the OS can be omitted, since the OS is always included in the cache key.'
+    description: "Additional cache key component to include when caching the global Zig cache directory. When using a matrix strategy, this should include the matrix variables to ensure all jobs are cached. Matrix variables which decide the OS can be omitted, since the OS is always included in the cache key."
     required: false
-    default: ''
+    default: ""
   cache-size-limit:
-    description: 'The maximum permitted size of the global Zig cache directory, in MiB. When the cache directory exceeds this size, it is cleared. Default is 2048 (2 GiB). 0 means no limit.'
+    description: "The maximum permitted size of the global Zig cache directory, in MiB. When the cache directory exceeds this size, it is cleared. Default is 2048 (2 GiB). 0 means no limit."
     required: true
     default: 2048
   use-tool-cache:
-    description: 'Override whether to use the tool cache when caching Zig installations. Default is false for GitHub-hosted runners, true for other runners.'
+    description: "Override whether to use the tool cache when caching Zig installations. Default is false for GitHub-hosted runners, true for other runners."
     required: false
-    default: ''
+    default: ""
 outputs:
   version:
-    description: 'The installed Zig version.'
+    description: "The installed Zig version."
   path:
-    description: 'The directory containing the installed Zig executable.'
+    description: "The directory containing the installed Zig executable."
 runs:
-  using: 'node24'
-  main: 'dist/main.mjs'
-  post: 'dist/post.mjs'
+  using: "node24"
+  main: "dist/main.mjs"
+  post: "dist/post.mjs"
