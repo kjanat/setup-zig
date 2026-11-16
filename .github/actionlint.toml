@@ -5,10 +5,6 @@ plugins = [
   "github.com/kjanat/actionlint-plugin-ruff@v0.3.0",
 ]
 
-[[ignores]]
-rule = "action/missing-file"
-file = "action.yml"
-
 [lint]
 enabled      = true
 experimental = true
