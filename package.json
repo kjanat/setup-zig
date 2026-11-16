@@ -1,19 +1,32 @@
 {
   "name": "setup-zig",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "3.1.0",
+  "description": "Install verified Zig compilers and preserve Zig build caches in Actions workflows",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "actionlint": "actionlint check -v --strict --experimental",
+    "build": "tsdown",
+    "test": "node --experimental-vm-modules --test test/*.test.mjs",
+    "check:dist": "bun run build && git diff --exit-code -- dist"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "dependencies": {
-    "@actions/cache": "^4.0.2",
-    "@actions/core": "^1.11.1",
-    "@actions/exec": "^1.1.1",
-    "@actions/github": "^6.0.1",
-    "@actions/tool-cache": "^2.0.2"
-  }
+    "@actions/cache": "^6.3.0",
+    "@actions/core": "^3.0.1",
+    "@actions/exec": "^3.0.0",
+    "@actions/tool-cache": "^4.0.0",
+    "@tabnas/jsonic": "^0.7.12",
+    "@tabnas/parser": "^0.12.20",
+    "@tabnas/zon": "^0.5.19"
+  },
+  "devDependencies": {
+    "@kjanat/actionlint": "https://pkg.pr.new/kjanat/actionlint/@kjanat/actionlint@master",
+    "rollup-plugin-license": "3.7.2",
+    "tsdown": "^0.23.7"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=24"
+  },
+  "packageManager": "bun@1.4.4"
 }

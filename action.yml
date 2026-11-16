@@ -4,12 +4,15 @@ inputs:
   version:
     description: 'Version of the Zig compiler, e.g. "0.13.0" or "0.13.0-dev.351+64ef45eb0". "master" uses the latest nightly build. "latest" uses the latest tagged release. Leave empty to use minimum_zig_version from build.zig.zon, with a fallback to "latest".'
     default: ''
+  manifest-path:
+    description: 'Path to the build.zig.zon used when version is empty, relative to the workspace.'
+    default: 'build.zig.zon'
   mirror:
     description: 'Override of Zig download mirror to use, e.g. "https://pkg.machengine.org/zig".'
     required: false
     default: ''
   use-cache:
-    description: 'Whether to cache the global and local Zig cache directories.'
+    description: 'Whether to restore and save Zig build caches. Compiler archives are cached independently.'
     required: true
     default: true
   cache-key:
@@ -24,7 +27,12 @@ inputs:
     description: 'Override whether to use the tool cache when caching Zig installations. Default is false for GitHub-hosted runners, true for other runners.'
     required: false
     default: ''
+outputs:
+  version:
+    description: 'The installed Zig version.'
+  path:
+    description: 'The directory containing the installed Zig executable.'
 runs:
   using: 'node24'
-  main: 'main.js'
-  post: 'post.js'
+  main: 'dist/main.mjs'
+  post: 'dist/post.mjs'
