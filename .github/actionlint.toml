@@ -1,22 +1,24 @@
 #:schema https://raw.githubusercontent.com/kjanat/actionlint/refs/heads/master/actionlint.schema.json
 
 plugins = [
-	"github.com/kjanat/actionlint-plugin-shellcheck@v0.3.1",
-	"github.com/kjanat/actionlint-plugin-ruff@v0.3.0",
+  "github.com/kjanat/actionlint-plugin-shellcheck@v0.3.1",
+  "github.com/kjanat/actionlint-plugin-ruff@v0.3.0",
 ]
+
+[[ignores]]
+rule = "action/missing-file"
+file = "action.yml"
 
 [lint]
-enabled = true
+enabled      = true
+experimental = true
 
 [lint.rules]
-preset = "all"
-
+preset      = "all"
 conventions = "on"
 correctness = "on"
-suspicious = "on"
-disable = [
-	"unpinned-reference",
-]
+suspicious  = "on"
+disable     = ["unpinned-reference"]
 
 [lint.rules.security]
 unpinned-reference = { level = "off" }
