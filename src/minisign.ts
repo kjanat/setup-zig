@@ -53,7 +53,7 @@ function parseSignature(sig_buf: Buffer) {
 async function verifySignature(
 	pubkey: Awaited<ReturnType<typeof parseKey>>,
 	signature: ReturnType<typeof parseSignature>,
-	file_content: Buffer,
+	file_content: Buffer<ArrayBuffer>,
 ) {
 	if (!signature.key_id.equals(pubkey.id)) {
 		return false; // wrong key

@@ -20,10 +20,12 @@ test('HTTP errors, invalid JSON, timeouts, and streamed downloads', async t => {
 		server.closeAllConnections();
 		server.close();
 	});
-	const base = `http://127.0.0.1:${server.address().port}`;
+	const address = server.address();
+	assert.ok(address !== null && typeof address === 'object');
+	const base = `http://127.0.0.1:${address.port}`;
 	await assert.rejects(fetchResponse(`${base}/error`), /HTTP 503/);
 	await assert.rejects(fetchJson(`${base}/invalid`), /Failed to read JSON/);
-	await assert.rejects(fetchResponse(`${base}/slow`, 20), /timeout/i);
+	await assert.rejects(fetchResponse(`${base}/slow`, 20), /timeout|timed out/i);
 	const downloaded = await downloadFile(base);
 	t.after(() => fs.rm(downloaded, { force: true }));
 	assert.equal(await fs.readFile(downloaded, 'utf8'), 'download fixture');

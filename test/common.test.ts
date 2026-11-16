@@ -1,9 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { load } from './helpers.mjs';
+import { load } from './helpers.ts';
+
+interface Options {
+	source?: string;
+	version?: string;
+	platform?: string;
+	arch?: string;
+	json?: unknown;
+	missing?: boolean;
+	inputs?: Record<string, string>;
+}
 
 async function common(
-	{ source, version = '', platform = 'linux', arch = 'x64', json, missing = false, inputs = {} } = {},
+	{ source, version = '', platform = 'linux', arch = 'x64', json, missing = false, inputs = {} }: Options = {},
 ) {
 	return load('common.ts', {
 		fs: {
@@ -15,7 +25,10 @@ async function common(
 			},
 		},
 		os: { arch: () => arch, platform: () => platform, endianness: () => 'LE' },
-		'@actions/core': { getInput: name => ({ version, ...inputs })[name] ?? '', info() {} },
+		'@actions/core': {
+			getInput: (name: string): string => ({ version, ...inputs })[name] ?? '',
+			info() {},
+		},
 		'./network.ts': {
 			fetchJson: async () => {
 				if (json instanceof Error) throw json;

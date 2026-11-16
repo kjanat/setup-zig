@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import * as minisign from '../src/minisign.ts';
-import { load } from './helpers.mjs';
+import { load } from './helpers.ts';
 
 test('manifest version ignores commented-out fields', async () => {
 	const ctx = await load('common.ts', {
@@ -26,7 +26,7 @@ test('signature parser rejects trailing bytes', () => {
 });
 
 test('unreadable cache size is unknown rather than zero', async () => {
-	const warnings = [];
+	const warnings: unknown[] = [];
 	const ctx = await load('post.ts', {
 		'node:fs/promises': {
 			default: {
@@ -36,7 +36,7 @@ test('unreadable cache size is unknown rather than zero', async () => {
 				},
 			},
 		},
-		'@actions/core': { warning: message => warnings.push(message) },
+		'@actions/core': { warning: (message: string | Error) => warnings.push(message) },
 	});
 	assert.equal(await ctx.dirSize('/cache'), null);
 	assert.match(warnings.join('\n'), /simulated stat failure/);

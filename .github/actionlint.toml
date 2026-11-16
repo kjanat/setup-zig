@@ -1,0 +1,22 @@
+#:schema https://raw.githubusercontent.com/kjanat/actionlint/refs/heads/master/actionlint.schema.json
+
+plugins = [
+	"github.com/kjanat/actionlint-plugin-shellcheck@v0.3.1",
+	"github.com/kjanat/actionlint-plugin-ruff@v0.3.0",
+]
+
+[lint]
+enabled = true
+
+[lint.rules]
+preset = "all"
+
+conventions = "on"
+correctness = "on"
+suspicious = "on"
+disable = [
+	"unpinned-reference",
+]
+
+[lint.rules.security]
+unpinned-reference = { level = "off" }

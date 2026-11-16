@@ -1,0 +1,45 @@
+name: Update version aliases
+run-name: ${{ inputs.beepboop_title || github.workflow }}
+on:
+  workflow_dispatch:
+    inputs:
+      beepboop_execution_id:
+        description: Beepboop release execution ID
+        required: true
+        type: string
+      beepboop_title:
+        description: Release title
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: action-version-aliases
+  cancel-in-progress: false
+jobs:
+  aliases:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: kjanat/beepboop/actions/begin@v1
+        id: release
+        with:
+          execution-id: ${{ inputs.beepboop_execution_id }}
+          stream: main
+          operation: aliases
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.context).sourceSha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: kjanat/beepboop/actions/token@v1
+        id: token
+        with:
+          permission-contents: write
+      - uses: kjanat/beepboop/actions/publish-refs@v1
+        with:
+          token: ${{ steps.token.outputs.token }}

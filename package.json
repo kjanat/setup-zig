@@ -7,29 +7,30 @@
 	"type": "module",
 	"imports": {
 		"#*": "./src/*.ts",
+		"#test": "./test/*.ts",
 		"#pkg": "./package.json"
 	},
 	"scripts": {
-		"actionlint": "actionlint check -v --strict --experimental",
-		"build": "tsdown",
-		"check:dist": "bun run build && git diff --exit-code -- dist",
-		"fmt": "bunx @kjanat/fmt",
-		"test": "node --experimental-vm-modules --test test/*.test.mjs",
-		"typecheck": "tsc --noEmit"
+		"preactionlint": "tsdown --logLevel silent",
+		"actionlint": "actionlint check --strict --experimental",
+		"build": "node scripts/build.ts",
+		"check:dist": "bun run build && node --check dist/main.mjs && node --check dist/post.mjs",
+		"fmt": "bunx @kjanat/fmt --excludes dist",
+		"test": "node --experimental-vm-modules --test test/*.test.ts",
+		"typecheck": "tsc --noEmit && tsc --noEmit --project test"
 	},
-	"dependencies": {
+	"devDependencies": {
 		"@actions/cache": "^6.3.0",
 		"@actions/core": "^3.0.1",
 		"@actions/exec": "^3.0.0",
 		"@actions/tool-cache": "^4.0.0",
-		"@tabnas/jsonic": "^0.7.12",
-		"@tabnas/parser": "^0.12.20",
-		"@tabnas/zon": "^0.5.19"
-	},
-	"devDependencies": {
 		"@kjanat/actionlint": "https://pkg.pr.new/kjanat/actionlint/@kjanat/actionlint@master",
 		"@kjanat/fmt": "^0.62.0",
-		"@types/node": "24",
+		"@tabnas/jsonic": "^0.7.12",
+		"@tabnas/parser": "^0.12.20",
+		"@tabnas/zon": "^0.5.19",
+		"@types/bun": "^1.4.4",
+		"@types/node": "^26.6.6",
 		"rollup-plugin-license": "3.7.2",
 		"tsdown": "^0.23.7",
 		"typescript": "^7.0.2"

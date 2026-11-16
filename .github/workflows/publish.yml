@@ -1,0 +1,60 @@
+name: Publish action
+run-name: ${{ inputs.beepboop_title || github.workflow }}
+on:
+  workflow_dispatch:
+    inputs:
+      beepboop_execution_id:
+        description: Beepboop release execution ID
+        required: true
+        type: string
+      beepboop_title:
+        description: Release title
+        type: string
+permissions:
+  contents: read
+concurrency:
+  group: publish-action
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: kjanat/beepboop/actions/begin@v1
+        id: release
+        with:
+          execution-id: ${{ inputs.beepboop_execution_id }}
+          stream: main
+          operation: promote
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.context).sourceSha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run test
+      - run: bun test
+      - run: bun run check:dist
+      - name: Verify the bundled action
+        run: node scripts/smoke.ts 0.15.2 false
+      - uses: kjanat/beepboop/actions/token@v1
+        id: token
+        with:
+          permission-contents: write
+      - name: Publish the built patch and source-preserving ancestry merge
+        uses: kjanat/beepboop/actions/publish-refs@v1
+        with:
+          token: ${{ steps.token.outputs.token }}
+          files: '["dist/main.mjs", "dist/post.mjs"]'
+      - name: Publish the immutable patch Release
+        uses: kjanat/beepboop/actions/publish-release@v1

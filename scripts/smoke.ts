@@ -9,7 +9,7 @@ const root = await fs.mkdtemp(path.join(os.tmpdir(), 'setup-zig-smoke-'));
 try {
 	const action = path.join(root, 'action');
 	await fs.cp(fileURLToPath(new URL('../dist', import.meta.url)), action, { recursive: true });
-	const env = {
+	const env: NodeJS.ProcessEnv = {
 		PATH: process.env.PATH,
 		HOME: os.homedir(),
 		RUNNER_TEMP: root,
@@ -24,10 +24,11 @@ try {
 		'INPUT_USE-TOOL-CACHE': process.argv[3] || 'false',
 	};
 	for (const name of ['GITHUB_PATH', 'GITHUB_ENV', 'GITHUB_OUTPUT', 'GITHUB_STATE']) {
-		env[name] = path.join(root, name);
-		await fs.writeFile(env[name], '');
+		const file = path.join(root, name);
+		env[name] = file;
+		await fs.writeFile(file, '');
 	}
-	function run(executable, args, cwd = root) {
+	function run(executable: string, args: string[], cwd = root) {
 		const result = spawnSync(executable, args, { env, cwd, encoding: 'utf8', timeout: 300000 });
 		process.stdout.write(result.stdout || '');
 		process.stderr.write(result.stderr || '');
@@ -35,7 +36,7 @@ try {
 		if (result.status !== 0) throw new Error(`${executable} exited ${result.status}`);
 	}
 	run(process.execPath, [path.join(action, 'main.mjs')]);
-	const output = await fs.readFile(env.GITHUB_OUTPUT, 'utf8');
+	const output = await fs.readFile(path.join(root, 'GITHUB_OUTPUT'), 'utf8');
 	const zigDir = /^path<<[^\n]+\n([^\n]+)\n/m.exec(output)?.[1];
 	if (!zigDir) throw new Error('Missing installation path output');
 	const zig = path.join(zigDir, process.platform === 'win32' ? 'zig.exe' : 'zig');

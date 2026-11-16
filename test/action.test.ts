@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { test } from 'node:test';
-import { load } from './helpers.mjs';
+import { test, type TestContext } from 'node:test';
+import { load } from './helpers.ts';
 
-function logger(inputs = {}, state = {}) {
-	const warnings = [], failures = [], outputs = {}, variables = {};
+function logger(inputs: Record<string, string> = {}, state: Record<string, string> = {}) {
+	const warnings: unknown[] = [];
+	const failures: unknown[] = [];
+	const outputs: Record<string, unknown> = {};
+	const variables: Record<string, unknown> = {};
 	return {
 		warnings,
 		failures,
@@ -14,25 +17,25 @@ function logger(inputs = {}, state = {}) {
 		variables,
 		state,
 		info() {},
-		warning: m => warnings.push(m),
-		setFailed: m => failures.push(m),
-		getInput: n => inputs[n] ?? '',
-		getBooleanInput: n => inputs[n] !== 'false',
-		saveState: (n, v) => {
+		warning: (m: string | Error) => warnings.push(m),
+		setFailed: (m: string | Error) => failures.push(m),
+		getInput: (n: string) => inputs[n] ?? '',
+		getBooleanInput: (n: string) => inputs[n] !== 'false',
+		saveState: (n: string, v: unknown) => {
 			state[n] = String(v);
 		},
-		getState: n => state[n] ?? '',
+		getState: (n: string) => state[n] ?? '',
 		addPath() {},
-		setOutput: (n, v) => {
+		setOutput: (n: string, v: unknown) => {
 			outputs[n] = v;
 		},
-		exportVariable: (n, v) => {
+		exportVariable: (n: string, v: unknown) => {
 			variables[n] = v;
 		},
 	};
 }
 
-async function directory(t) {
+async function directory(t: TestContext) {
 	const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'setup-zig-test-'));
 	t.after(() => fs.rm(dir, { recursive: true, force: true }));
 	return dir;
@@ -46,7 +49,7 @@ for (const useCache of ['true', 'false']) {
 			'@actions/core': core,
 			'@actions/tool-cache': { find: () => dir },
 			'@actions/exec': {
-				getExecOutput: async executable => {
+				getExecOutput: async (executable: string) => {
 					assert.equal(executable, `"${path.join(dir, process.platform === 'win32' ? 'zig.exe' : 'zig')}"`);
 					return { stdout: '0.15.2\n' };
 				},
@@ -115,15 +118,15 @@ test('mirror-list HTTP failure uses the fallback list', async t => {
 	const dir = await directory(t);
 	const downloaded = path.join(dir, 'download');
 	await fs.writeFile(downloaded, 'archive');
-	let attempted;
+	let attempted = '';
 	const ctx = await load('main.ts', {
 		'@actions/core': logger(),
 		'./network.ts': {
-			downloadFile: async url => {
+			downloadFile: async (url: string) => {
 				attempted = url;
 				return downloaded;
 			},
-			fetchResponse: async url => {
+			fetchResponse: async (url: string) => {
 				if (url.endsWith('community-mirrors.txt')) throw new Error('HTTP 503');
 				return { arrayBuffer: async () => Buffer.alloc(0) };
 			},
@@ -175,7 +178,7 @@ for (const limit of [0, 1]) {
 			{
 				'@actions/core': core,
 				'@actions/cache': {
-					saveCache: async (paths, key) => {
+					saveCache: async (paths: string[], key: string) => {
 						savedKey = key;
 						assert.deepEqual(Array.from(paths), [dir]);
 						const entries = await fs.readdir(dir);

@@ -9,18 +9,16 @@ This fork is maintained at [kjanat/setup-zig](https://github.com/kjanat/setup-zi
 ```yaml
 steps:
   - uses: actions/checkout@v6
-  - uses: kjanat/setup-zig@master
+  - uses: kjanat/setup-zig@v3
   - run: zig build test
 ```
-
-Pin the action to a full commit SHA for reproducible workflows. The examples use `master` to follow this fork's current development.
 
 With no explicit version, the action reads `build.zig.zon` in the workspace. It uses the top-level `mach_zig_version` field first, then `minimum_zig_version`. Comments and nested dependency fields are ignored. A missing manifest or absent version field selects the latest stable release. A malformed manifest, invalid version, or failed version lookup fails setup with an error.
 
 For a project in a subdirectory:
 
 ```yaml
-- uses: kjanat/setup-zig@master
+- uses: kjanat/setup-zig@v3
   with:
     manifest-path: packages/example/build.zig.zon
 ```
@@ -28,7 +26,7 @@ For a project in a subdirectory:
 An explicit `version` takes precedence over the manifest:
 
 ```yaml
-- uses: kjanat/setup-zig@master
+- uses: kjanat/setup-zig@v3
   id: zig
   with:
     version: "0.15.2"
@@ -37,7 +35,7 @@ An explicit `version` takes precedence over the manifest:
 
 Supported selectors are a release such as `0.15.2`, a specific nightly such as `0.14.0-dev.2+0884a4341`, `master` for the latest nightly, `latest` for the latest stable release, or a [Mach nominated version](https://machengine.org/about/nominated-zig/) such as `2024.5.0-mach`. Mirrors may remove older nightlies, making those versions unavailable.
 
-On Forgejo, use the full repository URL if required by your runner, for example `https://github.com/kjanat/setup-zig@master`. The action runs on Node 24 and requires a runner that supports that action runtime.
+On Forgejo, use the full repository URL if required by your runner, for example `https://github.com/kjanat/setup-zig@v3`. The action runs on Node 24 and requires a runner that supports that action runtime.
 
 ## Inputs
 
@@ -83,7 +81,7 @@ Every newly downloaded archive is verified against Zig's minisign public key. Th
 To select a specific mirror:
 
 ```yaml
-- uses: kjanat/setup-zig@master
+- uses: kjanat/setup-zig@v3
   with:
     mirror: https://pkg.machengine.org/zig
 ```
@@ -101,12 +99,18 @@ bun install --frozen-lockfile
 bun run typecheck
 bun run test
 bun run build
-node scripts/smoke.mjs 0.15.2 false
-node scripts/smoke.mjs 0.15.2 true
+node scripts/smoke.ts 0.15.2 false
+node scripts/smoke.ts 0.15.2 true
 ```
 
-TypeScript source modules live in `src/`. The distribution entry points are native ESM (`.mjs`). tsdown bundles runtime dependencies into `dist/`; `node_modules` is excluded from version control. Commit updated distribution files alongside source changes. `bun run check:dist` verifies that rebuilding reproduces the checked-in distribution.
+TypeScript source modules live in `src/`. tsdown builds each entry point independently into a standalone native ESM bundle, with dependency license notices embedded. The output contains exactly `dist/main.mjs` and `dist/post.mjs`; both `dist/` and `node_modules/` are ignored on `master`.
+
+`bun run check:dist` builds and checks the generated entry points. `bun run actionlint` builds before linting, so it works from a clean checkout. Both `bun test` and `bun run test` run the regression suite; the latter uses Node to exercise the action runtime. CI builds the bundles before every local-action smoke test.
+
+Beepboop manages releases using `.github/beepboop.json`. Preparation updates `package.json` through a version PR. After source review and release approval, the publication workflow builds and tests the two bundles. Beepboop signs the distribution commit and a source-preserving ancestry merge, publishes the patch tag, and creates an immutable GitHub Release. The dependent aliases workflow advances major and minor refs to that same built commit.
+
+The ancestry merge keeps `master` source-only and makes the distribution commit its ancestor for zizmor. Patch refs stay immutable; only major and minor aliases move. Immutable releases must be enabled for the repository, and the deployed Beepboop service and published helper actions must support the configured distribution policy. Begin a release with `beepboop release patch` after that capability is deployed; the first unpublished version can be selected explicitly.
 
 Tests cover manifest parsing, historical archive naming, minisign verification and malformed input, HTTP errors and timeouts, optional-cache failures, and post-step state. The smoke script runs the bundled action from an isolated directory without `node_modules`, downloads Zig, and runs `zig init` and `zig build test`.
 
-GitHub CI runs tests, checks the distribution and action metadata, and exercises installation on Linux x64/ARM64, Windows, and macOS with both tool-cache settings. Additional jobs check historical archive names and moving version selectors.
+GitHub CI runs the suite under Node and Bun, checks the distribution and action metadata, and exercises installation on Linux x64/ARM64, Windows, and macOS with both tool-cache settings. Additional jobs check historical archive names and moving version selectors.
