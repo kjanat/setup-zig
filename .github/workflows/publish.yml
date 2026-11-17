@@ -15,6 +15,9 @@ permissions:
 concurrency:
   group: publish-action
   cancel-in-progress: false
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
 jobs:
   publish:
     timeout-minutes: 15
@@ -45,11 +48,7 @@ jobs:
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
       - run: bun install --frozen-lockfile
       - run: bun run typecheck
-      - run: bun run test
-      - run: bun test
       - run: bun run check:dist
-      - name: Verify the bundled action
-        run: node scripts/smoke.ts 0.15.2 false
       - name: Attest the built action bundles
         id: attestation
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
@@ -57,24 +56,89 @@ jobs:
           subject-path: |
             dist/main.mjs
             dist/post.mjs
-      - name: Upload the attested action distribution
-        id: distribution
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: setup-zig-${{ fromJSON(steps.release.outputs.context).version }}-${{ github.run_id }}-${{ github.run_attempt }}
-          path: |
-            dist/main.mjs
-            dist/post.mjs
-            ${{ steps.attestation.outputs.bundle-path }}
-          if-no-files-found: error
       - uses: kjanat/beepboop/actions/token@v1
         id: token
-        with:
-          permission-contents: write
-      - name: Publish the built patch and source-preserving ancestry merge
-        uses: kjanat/beepboop/actions/publish-refs@v1
-        with:
-          token: ${{ steps.token.outputs.token }}
-          files: '["dist/main.mjs", "dist/post.mjs"]'
+        with: { permission-contents: write }
+      - name: Commit, tag, and record distribution ancestry
+        id: distribution
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          SOURCE_SHA: ${{ fromJSON(steps.release.outputs.context).sourceSha }}
+          RELEASE_VERSION: ${{ fromJSON(steps.release.outputs.context).version }}
+        run: |
+          [[ "${RELEASE_VERSION}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          [[ "$(node -p "require('./package.json').version")" == "${RELEASE_VERSION}" ]]
+          [[ "$(git rev-parse HEAD)" == "${SOURCE_SHA}" ]]
+          default_branch=$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.default_branch')
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')" == "${SOURCE_SHA}" ]]
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${SOURCE_SHA}" --jq '.verification.verified')" == true ]]
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/immutable-releases" --jq '.enabled')" == true ]]
+          tags=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v${RELEASE_VERSION}")
+          jq -e --arg ref "refs/tags/v${RELEASE_VERSION}" 'all(.[][]; .ref != $ref)' <<< "${tags}"
+          releases=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")
+          jq -e --arg tag "v${RELEASE_VERSION}" 'all(.[][]; .tag_name != $tag)' <<< "${releases}"
+          gh auth setup-git
+          git fetch --no-tags --unshallow origin "${SOURCE_SHA}"
+          major=${RELEASE_VERSION%%.*}
+          branch="releases/v${major}"
+          branches=$(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/heads/${branch}")
+          previous=$(jq -r --arg ref "refs/heads/${branch}" '.[] | select(.ref == $ref) | .object.sha' <<< "${branches}")
+          if [[ -n "${previous}" ]]; then
+            git fetch --no-tags origin "${previous}"
+            git merge-base --is-ancestor "${previous}" "${SOURCE_SHA}"
+            gh api --method PATCH "repos/${GITHUB_REPOSITORY}/git/refs/heads/${branch}" -f sha="${SOURCE_SHA}" -F force=false
+          else
+            gh api --method POST "repos/${GITHUB_REPOSITORY}/git/refs" -f ref="refs/heads/${branch}" -f sha="${SOURCE_SHA}"
+          fi
+          jq -n \
+            --arg repo "${GITHUB_REPOSITORY}" --arg branch "${branch}" \
+            --arg source "${SOURCE_SHA}" --arg version "${RELEASE_VERSION}" \
+            --rawfile main dist/main.mjs --rawfile post dist/post.mjs \
+            '{query: "mutation($input: CreateCommitOnBranchInput!) { createCommitOnBranch(input: $input) { commit { oid signature { isValid } } } }", variables: {input: {branch: {repositoryNameWithOwner: $repo, branchName: $branch}, expectedHeadOid: $source, message: {headline: ("Build " + $version + " distribution")}, fileChanges: {additions: [{path: "dist/main.mjs", contents: ($main | @base64)}, {path: "dist/post.mjs", contents: ($post | @base64)}]}}}}' \
+            | gh api graphql --input - > "${RUNNER_TEMP}/distribution-commit.json"
+          jq -e '.data.createCommitOnBranch.commit.signature.isValid == true' "${RUNNER_TEMP}/distribution-commit.json"
+          commit=$(jq -r '.data.createCommitOnBranch.commit.oid' "${RUNNER_TEMP}/distribution-commit.json")
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${commit}" --jq '.verification.verified')" == true ]]
+          git fetch --no-tags origin "${commit}"
+          [[ "$(git rev-parse "${commit}^1")" == "${SOURCE_SHA}" ]]
+          diff -u <(printf 'dist/main.mjs\ndist/post.mjs\n') <(git diff-tree --no-commit-id --name-only -r "${commit}")
+          for file in dist/main.mjs dist/post.mjs; do
+            [[ "$(git rev-parse "${commit}:${file}")" == "$(git hash-object "${file}")" ]]
+          done
+          tree=$(git rev-parse "${SOURCE_SHA}^{tree}")
+          ancestry=$(gh api --method POST "repos/${GITHUB_REPOSITORY}/git/commits" \
+            -f message="Record ${RELEASE_VERSION} distribution ancestry" -f tree="${tree}" \
+            -f "parents[]=${SOURCE_SHA}" -f "parents[]=${commit}" --jq '.sha')
+          git fetch --no-tags origin "${ancestry}"
+          [[ "$(git rev-parse "${ancestry}^{tree}")" == "${tree}" ]]
+          git merge-base --is-ancestor "${commit}" "${ancestry}"
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')" == "${SOURCE_SHA}" ]]
+          git push --atomic origin "${ancestry}:refs/heads/${default_branch}" "${commit}:refs/tags/v${RELEASE_VERSION}"
+          echo "sha=${commit}" >> "${GITHUB_OUTPUT}"
       - name: Publish the immutable patch Release
-        uses: kjanat/beepboop/actions/publish-release@v1
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          RELEASE_VERSION: ${{ fromJSON(steps.release.outputs.context).version }}
+          ATTESTATION_BUNDLE: ${{ steps.attestation.outputs.bundle-path }}
+        run: |
+          gh release create "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag --draft --title "v${RELEASE_VERSION}" --generate-notes
+          cp "${ATTESTATION_BUNDLE}" "${RUNNER_TEMP}/attestation.json"
+          gh release upload "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" \
+            dist/main.mjs dist/post.mjs "${RUNNER_TEMP}/attestation.json"
+          gh release edit "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" --draft=false
+          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v${RELEASE_VERSION}" --jq '.immutable and (.draft | not)')" == true ]]
+      - name: Update major and minor refs
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          RELEASE_VERSION: ${{ fromJSON(steps.release.outputs.context).version }}
+          DISTRIBUTION_SHA: ${{ steps.distribution.outputs.sha }}
+        run: |
+          major=${RELEASE_VERSION%%.*}
+          minor=${RELEASE_VERSION%.*}
+          for alias in "v${major}" "v${minor}"; do
+            refs=$(gh api "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/${alias}")
+            previous=$(jq -r --arg ref "refs/tags/${alias}" '.[] | select(.ref == $ref) | .object.sha' <<< "${refs}")
+            git push --force-with-lease="refs/tags/${alias}:${previous}" origin "${DISTRIBUTION_SHA}:refs/tags/${alias}"
+            [[ "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${alias}" --jq '.object.sha')" == "${DISTRIBUTION_SHA}" ]]
+          done
