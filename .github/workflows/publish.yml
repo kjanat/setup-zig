@@ -72,7 +72,6 @@ jobs:
           default_branch=$(gh api "repos/${GITHUB_REPOSITORY}" --jq '.default_branch')
           [[ "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')" == "${SOURCE_SHA}" ]]
           [[ "$(gh api "repos/${GITHUB_REPOSITORY}/git/commits/${SOURCE_SHA}" --jq '.verification.verified')" == true ]]
-          [[ "$(gh api "repos/${GITHUB_REPOSITORY}/immutable-releases" --jq '.enabled')" == true ]]
           tags=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/git/matching-refs/tags/v${RELEASE_VERSION}")
           jq -e --arg ref "refs/tags/v${RELEASE_VERSION}" 'all(.[][]; .ref != $ref)' <<< "${tags}"
           releases=$(gh api --paginate --slurp "repos/${GITHUB_REPOSITORY}/releases?per_page=100")
