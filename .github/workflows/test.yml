@@ -14,7 +14,7 @@ jobs:
         with:
           node-version: "24"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - run: bun install
+      - run: bun install --force
       - run: bun run build
       - name: "Create build.zig.zon"
         run: |
@@ -57,7 +57,7 @@ jobs:
         with:
           node-version: "24"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - run: bun install
+      - run: bun install --force
       - run: bun run build
       - name: "Setup Zig"
         uses: "./"
