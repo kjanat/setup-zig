@@ -28,7 +28,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, ubuntu-24.04-arm, windows-latest]
+        os: [ubuntu-26.04, ubuntu-26.04-arm, windows-latest]
         tool-cache: ["true", "false"]
         zig-version: ["0.15.2"]
         include:
