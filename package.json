@@ -1,6 +1,6 @@
 {
 	"name": "setup-zig",
-	"version": "3.1.0",
+	"version": "3.1.1",
 	"private": true,
 	"description": "Install verified Zig compilers and preserve Zig build caches in Actions workflows",
 	"license": "MIT",
