@@ -69,6 +69,7 @@ jobs:
         with:
           manifest-path: project/build.zig.zon
           use-tool-cache: ${{ matrix.tool-cache }}
+          cache-key: tool-cache-${{ matrix.tool-cache }}
       - name: Check compiler and outputs
         shell: bash
         env:
@@ -88,6 +89,7 @@ jobs:
         with:
           version: ${{ matrix.zig-version }}
           use-tool-cache: ${{ matrix.tool-cache }}
+          use-cache: false
   versions:
     timeout-minutes: 15
     name: Resolve Zig ${{ matrix.version }}
