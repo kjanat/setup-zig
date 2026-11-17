@@ -118,13 +118,11 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           RELEASE_VERSION: ${{ fromJSON(steps.release.outputs.context).version }}
-          ATTESTATION_BUNDLE: ${{ steps.attestation.outputs.bundle-path }}
         run: |
           gh release create "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" \
             --verify-tag --draft --title "v${RELEASE_VERSION}" --generate-notes
-          cp "${ATTESTATION_BUNDLE}" "${RUNNER_TEMP}/attestation.json"
           gh release upload "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" \
-            dist/main.mjs dist/post.mjs "${RUNNER_TEMP}/attestation.json"
+            dist/main.mjs dist/post.mjs
           gh release edit "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" --draft=false
           [[ "$(gh api "repos/${GITHUB_REPOSITORY}/releases/tags/v${RELEASE_VERSION}" --jq '.immutable and (.draft | not)')" == true ]]
       - name: Update major and minor refs
