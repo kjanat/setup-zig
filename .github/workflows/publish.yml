@@ -51,11 +51,22 @@ jobs:
       - name: Verify the bundled action
         run: node scripts/smoke.ts 0.15.2 false
       - name: Attest the built action bundles
+        id: attestation
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
         with:
           subject-path: |
             dist/main.mjs
             dist/post.mjs
+      - name: Upload the attested action distribution
+        id: distribution
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: setup-zig-${{ fromJSON(steps.release.outputs.context).version }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            dist/main.mjs
+            dist/post.mjs
+            ${{ steps.attestation.outputs.bundle-path }}
+          if-no-files-found: error
       - uses: kjanat/beepboop/actions/token@v1
         id: token
         with:
