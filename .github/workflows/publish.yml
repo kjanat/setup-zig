@@ -114,13 +114,56 @@ jobs:
           [[ "$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/heads/${default_branch}" --jq '.object.sha')" == "${SOURCE_SHA}" ]]
           git push --atomic origin "${ancestry}:refs/heads/${default_branch}" "${commit}:refs/tags/v${RELEASE_VERSION}"
           echo "sha=${commit}" >> "${GITHUB_OUTPUT}"
+      - name: Generate release notes from source commits
+        env:
+          GH_TOKEN: ${{ steps.token.outputs.token }}
+          SOURCE_SHA: ${{ fromJSON(steps.release.outputs.context).sourceSha }}
+          RELEASE_VERSION: ${{ fromJSON(steps.release.outputs.context).version }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { execFileSync } from 'node:child_process';
+          import { writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+
+          const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
+          const { SOURCE_SHA: source, RELEASE_VERSION: version, GITHUB_REPOSITORY: repository, RUNNER_TEMP: temp } = process.env;
+          const parts = value => value.replace(/^v/, '').split('.').map(Number);
+          const compare = (a, b) => {
+            const left = parts(a), right = parts(b);
+            return left[0] - right[0] || left[1] - right[1] || left[2] - right[2];
+          };
+          const tags = git('ls-remote', '--tags', '--refs', 'origin', 'v*.*.*')
+            .split('\n').map(line => line.split('\t')[1]?.replace('refs/tags/', ''))
+            .filter(tag => tag && /^v\d+\.\d+\.\d+$/.test(tag) && compare(tag, version) < 0)
+            .sort(compare);
+          const previous = tags.at(-1);
+          let range = source;
+          if (previous) {
+            git('fetch', '--no-tags', 'origin', `refs/tags/${previous}`);
+            range = `${git('rev-parse', 'FETCH_HEAD')}..${source}`;
+          }
+          const commits = git('log', '--first-parent', '--no-merges', '--reverse', '--format=%H%x09%s', range)
+            .split('\n').filter(Boolean).map(line => {
+              const separator = line.indexOf('\t');
+              return { sha: line.slice(0, separator), subject: line.slice(separator + 1) };
+            }).filter(commit => !/^(?:Prepare|Release|Bump(?: version)?)(?: to)? v?\d+\.\d+\.\d+$/i.test(commit.subject));
+          const base = `${process.env.GITHUB_SERVER_URL}/${repository}`;
+          const escape = text => text.replace(/[\\`*_[\]<>]/g, character => `\\${character}`);
+          const changes = commits.map(commit => `- ${escape(commit.subject)} ([${commit.sha.slice(0, 7)}](${base}/commit/${commit.sha}))`);
+          const changelog = previous
+            ? `${base}/compare/${previous}...v${version}`
+            : `${base}/commits/v${version}`;
+          const notes = `## Changes\n\n${changes.join('\n') || `- Release v${version}.`}\n\n**Full Changelog**: ${changelog}\n`;
+          writeFileSync(join(temp, 'release-notes.md'), notes);
+          console.log(notes);
+          NODE
       - name: Publish the immutable patch Release
         env:
           GH_TOKEN: ${{ steps.token.outputs.token }}
           RELEASE_VERSION: ${{ fromJSON(steps.release.outputs.context).version }}
         run: |
           gh release create "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" \
-            --verify-tag --draft --title "v${RELEASE_VERSION}" --generate-notes
+            --verify-tag --draft --title "v${RELEASE_VERSION}" --notes-file "${RUNNER_TEMP}/release-notes.md"
           gh release upload "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" \
             dist/main.mjs dist/post.mjs
           gh release edit "v${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" --draft=false
