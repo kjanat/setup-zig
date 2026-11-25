@@ -19,7 +19,7 @@
 		"check:dist": "node --check dist/*",
 		"fmt": "bunx @kjanat/fmt --excludes dist",
 		"test": "node --experimental-vm-modules --test test/*.test.ts",
-		"typecheck": "tsc --noEmit && tsc --noEmit --project test"
+		"typecheck": "tsrs --noEmit && tsrs --noEmit --project test"
 	},
 	"devDependencies": {
 		"@actions/cache": "^6.3.0",
@@ -35,9 +35,10 @@
 		"rollup-plugin-license": "3.7.2",
 		"runner-run": "^0.28.0",
 		"tsdown": "^0.23.7",
+		"tsrs": "latest",
 		"typescript": "^7.0.2"
 	},
-	"packageManager": "bun@1.4.4",
+	"packageManager": "bun@1.4.5",
 	"engines": {
 		"node": ">=24"
 	},
