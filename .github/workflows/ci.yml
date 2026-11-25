@@ -51,23 +51,21 @@ jobs:
       - name: Write project manifest
         shell: bash
         env:
-          ZIG_VERSION: ${{ matrix.zig-version }}
-        run: |
-          mkdir project
-          cat > project/build.zig.zon <<ZON
+          manPath: &mp project/build.zig.zon
+          buildZigZon: |
           .{
               .name = .test_project,
               .version = "0.0.0",
               // .minimum_zig_version = "0.11.0",
-              .minimum_zig_version = "$ZIG_VERSION",
+              .minimum_zig_version = "${{ matrix.zig-version }}",
               .paths = .{""},
           }
-          ZON
+        run: mkdir -p project && echo "${buildZigZon}" > project/build.zig.zon
       - name: Install from manifest
         id: zig
         uses: ./
         with:
-          manifest-path: project/build.zig.zon
+          manifest-path: *mp
           use-tool-cache: ${{ matrix.tool-cache }}
           cache-key: tool-cache-${{ matrix.tool-cache }}
       - name: Check compiler and outputs
