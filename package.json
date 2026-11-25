@@ -11,7 +11,7 @@
 		"#pkg": "./package.json"
 	},
 	"scripts": {
-		"actionlint": "bunx yomama@https://pkg.pr.new/kjanat/actionlint/@kjanat/actionlint@master",
+		"actionlint": "bunx -p yomama@https://pkg.pr.new/kjanat/actionlint/@kjanat/actionlint@master actionlint",
 		"preactionlint:run": "tsdown --logLevel silent",
 		"actionlint:run": "run actionlint check --strict --ignore action/missing-file",
 		"build": "node scripts/build.ts",
@@ -35,7 +35,7 @@
 		"rollup-plugin-license": "3.7.2",
 		"runner-run": "^0.28.0",
 		"tsdown": "^0.23.7",
-		"tsrs": "latest",
+		"tsrs": "7.1.0-beta.tsrs5",
 		"typescript": "^7.0.2"
 	},
 	"packageManager": "bun@1.4.5",

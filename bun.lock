@@ -18,7 +18,7 @@
         "rollup-plugin-license": "3.7.2",
         "runner-run": "^0.28.0",
         "tsdown": "^0.23.7",
-        "tsrs": "latest",
+        "tsrs": "7.1.0-beta.tsrs5",
         "typescript": "^7.0.2",
       },
     },
