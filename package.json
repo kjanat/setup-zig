@@ -11,8 +11,9 @@
 		"#pkg": "./package.json"
 	},
 	"scripts": {
-		"preactionlint": "tsdown --logLevel silent",
-		"actionlint": "actionlint check --strict --ignore action/missing-file",
+		"preactionlint:run": "tsdown --logLevel silent",
+  "actionlint": "bunx yomama@https://pkg.pr.new/kjanat/actionlint/@kjanat/actionlint@master",
+		"actionlint:run": "run actionlint check --strict --ignore action/missing-file",
 		"build": "node scripts/build.ts",
 		"precheck:dist": "bun run build",
 		"check:dist": "node --check dist/*",
@@ -25,7 +26,6 @@
 		"@actions/core": "^3.0.1",
 		"@actions/exec": "^3.0.0",
 		"@actions/tool-cache": "^4.0.0",
-		"@kjanat/actionlint": "https://pkg.pr.new/kjanat/actionlint/@kjanat/actionlint@master",
 		"@kjanat/fmt": "^0.62.0",
 		"@tabnas/jsonic": "^0.7.12",
 		"@tabnas/parser": "^0.12.20",
