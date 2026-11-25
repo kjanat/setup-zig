@@ -11,32 +11,34 @@
 		"#pkg": "./package.json"
 	},
 	"scripts": {
-		"preactionlint": "tsdown --logLevel silent",
-		"actionlint": "actionlint check --strict --ignore action/missing-file",
+		"actionlint": "bunx -p yomama@https://pkg.pr.new/kjanat/actionlint/@kjanat/actionlint@master actionlint",
+		"preactionlint:run": "tsdown --logLevel silent",
+		"actionlint:run": "run actionlint check --strict --ignore action/missing-file",
 		"build": "node scripts/build.ts",
 		"precheck:dist": "bun run build",
 		"check:dist": "node --check dist/*",
 		"fmt": "bunx @kjanat/fmt --excludes dist",
 		"test": "node --experimental-vm-modules --test test/*.test.ts",
-		"typecheck": "tsc --noEmit && tsc --noEmit --project test"
+		"typecheck": "tsrs --noEmit && tsrs --noEmit --project test"
 	},
 	"devDependencies": {
 		"@actions/cache": "^6.3.0",
 		"@actions/core": "^3.0.1",
 		"@actions/exec": "^3.0.0",
 		"@actions/tool-cache": "^4.0.0",
-		"@kjanat/actionlint": "https://pkg.pr.new/kjanat/actionlint/@kjanat/actionlint@master",
-		"@kjanat/fmt": "^0.62.0",
+		"@kjanat/fmt": "^0.64.1",
 		"@tabnas/jsonic": "^0.7.12",
 		"@tabnas/parser": "^0.12.20",
 		"@tabnas/zon": "^0.5.19",
 		"@types/bun": "^1.4.4",
 		"@types/node": "^26.6.6",
 		"rollup-plugin-license": "3.7.2",
+		"runner-run": "^0.28.0",
 		"tsdown": "^0.23.7",
+		"tsrs": "7.1.0-beta.tsrs5",
 		"typescript": "^7.0.2"
 	},
-	"packageManager": "bun@1.4.4",
+	"packageManager": "bun@1.4.5",
 	"engines": {
 		"node": ">=24"
 	},

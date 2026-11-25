@@ -15,13 +15,13 @@ jobs:
         with:
           node-version: "26"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - run: bun install --force
+      - run: bun install --frozen-lockfile
       - run: bun run typecheck
       - run: bun run test
       - run: bun test
       - run: bun run check:dist
       - name: Lint action and workflows
-        run: bun run actionlint --ignore unpinned-reference
+        run: bun run actionlint:run --ignore unpinned-reference
   smoke:
     timeout-minutes: 20
     name: Install on ${{ matrix.os }} (tool cache ${{ matrix.tool-cache }})
@@ -46,28 +46,28 @@ jobs:
         with:
           node-version: "26"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - run: bun install --force
+      - run: bun install --frozen-lockfile
       - run: bun run build
       - name: Write project manifest
         shell: bash
         env:
-          ZIG_VERSION: ${{ matrix.zig-version }}
+          MANIFEST_PATH: &manifest-path project/build.zig.zon
+          BUILD_ZIG_ZON: |
+            .{
+                .name = .test_project,
+                .version = "0.0.0",
+                // .minimum_zig_version = "0.11.0",
+                .minimum_zig_version = "${{ matrix.zig-version }}",
+                .paths = .{""},
+            }
         run: |
-          mkdir project
-          cat > project/build.zig.zon <<ZON
-          .{
-              .name = .test_project,
-              .version = "0.0.0",
-              // .minimum_zig_version = "0.11.0",
-              .minimum_zig_version = "$ZIG_VERSION",
-              .paths = .{""},
-          }
-          ZON
+          mkdir -p "$(dirname "$MANIFEST_PATH")"
+          printf '%s' "$BUILD_ZIG_ZON" > "$MANIFEST_PATH"
       - name: Install from manifest
         id: zig
         uses: ./
         with:
-          manifest-path: project/build.zig.zon
+          manifest-path: *manifest-path
           use-tool-cache: ${{ matrix.tool-cache }}
           cache-key: tool-cache-${{ matrix.tool-cache }}
       - name: Check compiler and outputs
@@ -104,7 +104,7 @@ jobs:
         with:
           node-version: "26"
       - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-      - run: bun install --force
+      - run: bun install --frozen-lockfile
       - run: bun run build
       - uses: ./
         with:
