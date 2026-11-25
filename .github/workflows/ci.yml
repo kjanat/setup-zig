@@ -21,7 +21,7 @@ jobs:
       - run: bun test
       - run: bun run check:dist
       - name: Lint action and workflows
-        run: bun run actionlint --ignore unpinned-reference
+        run: bun run actionlint:run --ignore unpinned-reference
   smoke:
     timeout-minutes: 20
     name: Install on ${{ matrix.os }} (tool cache ${{ matrix.tool-cache }})

@@ -105,7 +105,7 @@ node scripts/smoke.ts 0.15.2 true
 
 TypeScript source modules live in `src/`. tsdown builds each entry point independently into a standalone native ESM bundle, with dependency license notices embedded. The output contains exactly `dist/main.mjs` and `dist/post.mjs`; both `dist/` and `node_modules/` are ignored on `master`.
 
-`bun run check:dist` builds and checks the generated entry points. `bun run actionlint` builds before linting, so it works from a clean checkout. Both `bun test` and `bun run test` run the regression suite; the latter uses Node to exercise the action runtime. CI builds the bundles before every local-action smoke test.
+`bun run check:dist` builds and checks the generated entry points. `bun run actionlint:run` builds before linting, so it works from a clean checkout. Both `bun test` and `bun run test` run the regression suite; the latter uses Node to exercise the action runtime. CI builds the bundles before every local-action smoke test.
 
 Beepboop manages releases using `.github/beepboop.json`. Preparation updates `package.json` through a version PR. After source review and release approval, the publication workflow builds and tests the two bundles. Beepboop signs the distribution commit and a source-preserving ancestry merge, publishes the patch tag, and creates an immutable GitHub Release. The dependent aliases workflow advances major and minor refs to that same built commit.
 
